@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prism for Stremio</title>
+<meta name="description" content="Sort, filter and rename the streams of any Stremio addon.">
+<link rel="icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b0c14;--panel:#12141f;--line:#262a40;--text:#edeffa;--muted:#8c93b0;--accent:#8b5cf6;--ok:#7cf29a;--bad:#ff6b8b;
+--spec:linear-gradient(90deg,#ff5d8f,#ffb454,#f7e26b,#7cf29a,#4cc9f0,#8b5cf6)}
+*{box-sizing:border-box}
+html{background:var(--ink);color:var(--text)}
+body{margin:0;font:16px/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:640px;margin:0 auto;padding:40px 20px 72px}
+header{display:flex;align-items:center;gap:16px}
+header img{width:64px;height:64px;border-radius:16px;flex:none}
+h1{font:700 46px/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.02em;margin:0}
+.tag{margin:6px 0 0;color:var(--muted);font-size:15px}
+.beam{height:3px;border-radius:2px;background:var(--spec);margin:28px 0 36px}
+.field{margin-bottom:30px}
+label,.lbl{display:block;font-weight:600;font-size:15px;margin-bottom:8px}
+.hint{color:var(--muted);font-size:13.5px;margin:8px 0 0}
+input[type=text]{width:100%;height:48px;padding:0 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text);font:inherit;outline:none;transition:border-color .15s}
+input[type=text]::placeholder{color:#5d6380}
+input[type=text]:focus{border-color:var(--accent)}
+.row{display:flex;gap:10px}
+.tick{flex:none;width:48px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:all .2s}
+.tick:hover{color:var(--text);border-color:#3a3f5e}
+.tick svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.tick.ok{background:var(--ok);border-color:var(--ok);color:#0b0c14}
+.tick.bad{border-color:var(--bad);color:var(--bad)}
+.tick.busy{opacity:.6;pointer-events:none}
+.status{min-height:21px;font-size:13.5px;margin:8px 0 0;color:var(--muted)}
+.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.chip span{display:block;padding:8px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-weight:500;font-size:14.5px;transition:all .15s}
+.chip input:checked+span{background:#1d1f3a;border-color:var(--accent);color:var(--text)}
+.chip input:focus-visible+span{outline:2px solid var(--text);outline-offset:2px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:4px;gap:4px}
+.seg label{margin:0;position:relative}
+.seg input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.seg span{display:block;text-align:center;padding:10px 6px;border-radius:9px;font-weight:500;font-size:14.5px;color:var(--muted);transition:all .15s}
+.seg input:checked+span{background:#1d1f3a;color:var(--text)}
+.seg input:focus-visible+span{outline:2px solid var(--text)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.btn{flex:1 1 220px;height:52px;border-radius:12px;font:600 16px "DM Sans",sans-serif;cursor:pointer;border:1px solid var(--line);transition:all .15s}
+.btn.primary{background:var(--text);color:var(--ink);border-color:var(--text)}
+.btn.ghost{background:transparent;color:var(--text)}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:focus-visible,.tick:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.note{color:var(--muted);font-size:13.5px;margin:12px 0 0}
+@media(max-width:480px){h1{font-size:38px}header img{width:56px;height:56px}.seg span{font-size:13.5px;padding:10px 2px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="/logo.png" alt="Prism logo">
+    <div><h1>Prism</h1><p class="tag">Sort, filter and rename the streams of any Stremio addon.</p></div>
+  </header>
+  <div class="beam"></div>
+
+  <div class="field">
+    <label for="up">Upstream addon manifest link</label>
+    <div class="row">
+      <input type="text" id="up" placeholder="https://addon.example.com/manifest.json" autocomplete="off" spellcheck="false" inputmode="url">
+      <button class="tick" id="tick" type="button" aria-label="Verify manifest link"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+  </div>
+
+  <div class="field">
+    <label for="name">Addon name</label>
+    <input type="text" id="name" placeholder="Prism" maxlength="60" autocomplete="off">
+    <p class="hint">Shown in Stremio's addon list and at the start of every stream name.</p>
+  </div>
+
+  <div class="field">
+    <span class="lbl">Qualities to keep</span>
+    <div class="chips" id="chips"></div>
+    <p class="hint">Unchecked qualities are hidden. Others covers streams with no detected resolution.</p>
+  </div>
+
+  <div class="field">
+    <label for="order">Quality order</label>
+    <input type="text" id="order" placeholder="4k, 1080p, 720p, 480p" autocomplete="off" spellcheck="false">
+    <p class="hint" id="orderHint">Separate with commas. Kept qualities you leave out go last, highest first.</p>
+  </div>
+
+  <div class="field">
+    <span class="lbl">Order by file size within the same quality</span>
+    <div class="seg" id="seg">
+      <label><input type="radio" name="s" value="desc" checked><span>Bigger first</span></label>
+      <label><input type="radio" name="s" value="asc"><span>Smaller first</span></label>
+      <label><input type="radio" name="s" value="off"><span>Don't sort</span></label>
+    </div>
+    <p class="hint">Streams with no known size go last in their quality.</p>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="install" type="button" disabled>Install in Stremio</button>
+    <button class="btn ghost" id="copy" type="button" disabled>Copy manifest URL</button>
+  </div>
+  <p class="note" id="note">Verify the upstream link with the tick to unlock install.</p>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const QS = [['4k','4K'],['1440p','1440p'],['1080p','1080p'],['720p','720p'],['576p','576p'],['480p','480p'],['360p','360p'],['others','Others']];
+const ALIAS = {'2160p':'4k','uhd':'4k','536p':'576p','other':'others','unknown':'others'};
+const norm = (s) => { s = s.trim().toLowerCase().replace(/\s+/g,''); s = ALIAS[s] || s; return QS.some(([k]) => k === s) ? s : null; };
+let verified = null;
+
+$('#chips').innerHTML = QS.map(([k,l]) => `<label class="chip"><input type="checkbox" value="${k}" checked><span>${l}</span></label>`).join('');
+
+function state() {
+  const toks = $('#order').value.split(',').map((x) => x.trim()).filter(Boolean);
+  return {
+    u: verified && verified.base, n: $('#name').value.trim(),
+    q: [...document.querySelectorAll('#chips input:checked')].map((i) => i.value),
+    o: toks.map(norm).filter(Boolean), bad: toks.filter((t) => !norm(t)),
+    s: document.querySelector('input[name=s]:checked').value,
+  };
+}
+function link() {
+  const { u, n, q, o, s } = state();
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify({ u, n, q, o, s })))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return `${location.host}/${b64}/manifest.json`;
+}
+function refresh() {
+  const st = state(), ok = !!verified && st.q.length > 0;
+  $('#install').disabled = $('#copy').disabled = !ok;
+  $('#note').textContent = !verified ? 'Verify the upstream link with the tick to unlock install.' : !st.q.length ? 'Keep at least one quality.' : 'Reinstall is not needed when Prism updates its stream formatting.';
+  const h = $('#orderHint');
+  h.textContent = st.bad.length ? `Not recognised: ${st.bad.join(', ')}. Use 4k, 1440p, 1080p, 720p, 576p, 480p, 360p or others.` : 'Separate with commas. Kept qualities you leave out go last, highest first.';
+  h.style.color = st.bad.length ? 'var(--bad)' : '';
+}
+function setStatus(cls, msg) { const s = $('#status'); s.className = 'status ' + cls; s.textContent = msg; $('#tick').className = 'tick ' + (cls === 'ok' ? 'ok' : cls === 'bad' ? 'bad' : ''); }
+
+async function verify() {
+  const v = $('#up').value.trim();
+  if (!v) return setStatus('bad', 'Paste a manifest link first.');
+  $('#tick').classList.add('busy'); setStatus('', 'Checking…');
+  try {
+    const d = await (await fetch('/api/verify?url=' + encodeURIComponent(v))).json();
+    if (d.ok) { verified = d; setStatus('ok', `Connected to ${d.name}${d.version ? ' v' + d.version : ''}`); }
+    else { verified = null; setStatus('bad', d.error); }
+  } catch { verified = null; setStatus('bad', 'Could not check the link. Try again.'); }
+  $('#tick').classList.remove('busy'); refresh();
+}
+
+$('#tick').onclick = verify;
+$('#up').addEventListener('keydown', (e) => { if (e.key === 'Enter') verify(); });
+$('#up').addEventListener('input', () => { verified = null; setStatus('', ''); refresh(); });
+document.querySelectorAll('#name,#order,#chips input,input[name=s]').forEach((el) => el.addEventListener('input', refresh));
+
+$('#install').onclick = () => { location.href = 'stremio://' + link(); };
+$('#copy').onclick = async () => {
+  const url = 'https://' + link(), b = $('#copy');
+  try { await navigator.clipboard.writeText(url); } catch { const t = document.createElement('textarea'); t.value = url; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+  b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy manifest URL'), 1600);
+};
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "functions": { "api/*.js": { "maxDuration": 30 } },
+  "rewrites": [
+    { "source": "/:cfg/manifest.json", "destination": "/api/addon?cfg=:cfg&r=manifest" },
+    { "source": "/:cfg/stream/:type/:file", "destination": "/api/addon?cfg=:cfg&r=stream&type=:type&file=:file" }
+  ]
+}
